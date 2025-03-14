@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "5Bu9YC4/gDU=",
+  "dgSpecHash": "IklR7PxO3wQ=",
   "success": true,
-  "projectFilePath": "C:\\Users\\gabri\\Works\\repo\\ApiRepo\\ApiRepo.csproj",
+  "projectFilePath": "C:\\Users\\gabri\\Works\\repo\\ApiRepo.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\gabri\\.nuget\\packages\\microsoft.aspnetcore.openapi\\9.0.3\\microsoft.aspnetcore.openapi.9.0.3.nupkg.sha512",
     "C:\\Users\\gabri\\.nuget\\packages\\microsoft.openapi\\1.6.17\\microsoft.openapi.1.6.17.nupkg.sha512"

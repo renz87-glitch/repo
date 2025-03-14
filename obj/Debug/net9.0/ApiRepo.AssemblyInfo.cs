@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ApiRepo")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d712560850e928293a44db16b9f502b669cd70c4")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8ea68b133ca26d5632cf160b1bd81597dd8d73ae")]
 [assembly: System.Reflection.AssemblyProductAttribute("ApiRepo")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ApiRepo")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
