@@ -43,6 +43,40 @@ builder.Services.AddAuthentication(options =>
         // Usa la chiave RSA generata
         IssuerSigningKey = new RsaSecurityKey(rsa)
     };
+    options.Events = new JwtBearerEvents
+    {
+        OnAuthenticationFailed = context =>
+        {
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning("OnAuthenticationFailed: Accesso negato per {Path} da utente {User}.",
+                                context.HttpContext.Request.Path,
+                                context.HttpContext.User.Identity?.Name ?? "anonymous");
+            if(context.Exception != null)
+            {
+                logger.LogWarning("Exception: {Exception}.",
+                                   context.Exception);
+            }
+            return Task.CompletedTask;
+        },
+        OnForbidden = context =>
+        {
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning("OnForbidden: Accesso negato per {Path} da utente {User}.",
+                                context.HttpContext.Request.Path,
+                                context.HttpContext.User.Identity?.Name ?? "anonymous");
+            return Task.CompletedTask;
+        },
+        OnChallenge = context =>
+        {
+            if (context.Error == null)
+            {
+                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                logger.LogWarning("OnChallenge: Challenge per {Path}, StatusCode: {StatusCode}.",
+                                    context.HttpContext.Request.Path, context.Response.StatusCode);
+            }
+            return Task.CompletedTask;
+        }
+    };
 });
 
 builder.Services.AddAuthorization();
@@ -79,6 +113,7 @@ app.Use(async (context, next) =>
         context.Request.Path = "/index.html";
         await next();
     }
+
 });
 
 // Abilita i file statici (assicurati di aver configurato wwwroot e index.html)
