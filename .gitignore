@@ -2,3 +2,6 @@
 /.vs/**
 /bin/**
 /obj/**
+obj/**
+obj/ApiRepo.csproj.nuget.dgspec.json
+obj/ApiRepo.csproj.nuget.g.props
