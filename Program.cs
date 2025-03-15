@@ -11,6 +11,39 @@ using System.Security.Cryptography;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Leggi la sezione "CorsPolicies" da appsettings.json e mappala in un dizionario
+var corsPolicies = builder.Configuration
+    .GetSection("CorsPolicies")
+    .Get<Dictionary<string, CorsPolicySettings>>();
+
+
+// Configura CORS: qui viene creato un policy che consente tutte le origini, metodi e header
+builder.Services.AddCors(options =>
+{
+    if(corsPolicies?.Count > 0) 
+    {
+        foreach (var policyConfig in corsPolicies)
+        {
+            options.AddPolicy(policyConfig.Key, policy =>
+            {
+                //"http://localhost:3000"
+                policy.WithOrigins(policyConfig.Value.AllowedOrigins)
+                      .WithMethods(policyConfig.Value.AllowedMethods)
+                      .WithHeaders(policyConfig.Value.AllowedHeaders);
+            });
+        }
+    } 
+    else
+    {
+        // default
+        options.AddPolicy("Policy1", policy =>
+        {
+            policy.WithOrigins("http://localhost:3000", "http://192.168.178.113:3000")
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        });
+    }
+});
 
 // Leggi le impostazioni JWT dal file di configurazione
 var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -122,6 +155,15 @@ app.UseStaticFiles();
 // Mappa i controller (se ne hai)
 app.MapControllers();
 
+if (corsPolicies?.Count > 0)
+{
+    app.UseCors(corsPolicies.First().Key);
+}
+else
+{
+    app.UseCors("Policy1");
+}
+
 // Avvia l'host web in background
 Task webHostTask = app.RunAsync();
 
@@ -145,3 +187,11 @@ Task cliTask = Task.Run(() =>
 
 // Attendi la terminazione di uno dei due (ad es. se l'utente esce dalla CLI)
 await Task.WhenAny(webHostTask, cliTask);
+
+
+public class CorsPolicySettings
+{
+    public string[] AllowedOrigins { get; set; }
+    public string[] AllowedMethods { get; set; }
+    public string[] AllowedHeaders { get; set; }
+}
