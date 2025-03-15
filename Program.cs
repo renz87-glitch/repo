@@ -4,8 +4,48 @@ using NSwag.AspNetCore;
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using System.Security.Cryptography;
 
 var builder = WebApplication.CreateBuilder(args);
+
+
+// Leggi le impostazioni JWT dal file di configurazione
+var jwtSettings = builder.Configuration.GetSection("Jwt");
+var key = jwtSettings["Key"];
+var issuer = jwtSettings["Issuer"];
+var audience = jwtSettings["Audience"];
+
+// Genera una nuova chiave RSA ogni avvio (2048 bit)
+RSA rsa = RSA.Create(2048);
+// Registra la chiave RSA come singleton
+builder.Services.AddSingleton(rsa);
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.RequireHttpsMetadata = false; // Imposta a true in produzione
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidIssuer = issuer,
+        ValidAudience = audience,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        // Usa la chiave RSA generata
+        IssuerSigningKey = new RsaSecurityKey(rsa)
+    };
+});
+
+builder.Services.AddAuthorization();
 
 // Configura i servizi (ad es. controller, file statici, ecc.)
 builder.Services.AddControllers();
