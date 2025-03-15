@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
+using NSwag.AspNetCore;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -9,7 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Configura i servizi (ad es. controller, file statici, ecc.)
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddOpenApi();
+// Configura NSwag utilizzando le impostazioni lette da appsettings.json
 builder.Services.AddOpenApiDocument();
 
 var app = builder.Build();
@@ -17,8 +18,9 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
-    app.UseSwaggerUi();    // Esponi l'interfaccia Swagger UI (di default su /swagger)
+    // Se vuoi utilizzare le impostazioni lette da appsettings.json:
+    app.UseOpenApi();
+    app.UseSwaggerUi();
 }
 
 // Middleware per il fallback alle SPA (come nel tuo snippet)
@@ -29,7 +31,9 @@ app.Use(async (context, next) =>
 
     if (context.Response.StatusCode == 404 &&
         !Path.HasExtension(context.Request.Path.Value) &&
-        !context.Request.Path.Value.StartsWith("/api/"))
+        !context.Request.Path.Value.StartsWith("/api/") &&
+        !context.Request.Path.Value.StartsWith("/swagger") &&
+        !context.Request.Path.Value.StartsWith("/openapi"))
     {
         Console.WriteLine("dirotto verso index!");
         context.Request.Path = "/index.html";
