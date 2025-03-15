@@ -1,2 +1,5 @@
-ApiRepo/bin
-ApiRepo/obj
+
+**/.vs/
+**/bin/
+**/bin/
+/bin/

@@ -1,10 +1,14 @@
-using ApiRepo.Controllers;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Hosting;
+using System;
+using System.IO;
+using System.Threading.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers(); // Questo abilita i controller
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+// Configura i servizi (ad es. controller, file statici, ecc.)
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
@@ -15,19 +19,48 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
-app.UseAuthorization();
-app.MapControllers(); // Questo assicura che vengano registrati
-
-// Debug: stampa i controller registrati
-Console.WriteLine("Controllers registrati:");
-foreach (var controller in builder.Services)
+// Middleware per il fallback alle SPA (come nel tuo snippet)
+app.Use(async (context, next) =>
 {
-    if (controller.ServiceType.FullName?.Contains("Controller") == true)
+    context.Request.EnableBuffering();
+    await next();
+
+    if (context.Response.StatusCode == 404 &&
+        !Path.HasExtension(context.Request.Path.Value) &&
+        !context.Request.Path.Value.StartsWith("/api/"))
     {
-        Console.WriteLine(controller.ServiceType.FullName);
+        Console.WriteLine("dirotto verso index!");
+        context.Request.Path = "/index.html";
+        await next();
     }
-}
+});
 
-app.Run();
+// Abilita i file statici (assicurati di aver configurato wwwroot e index.html)
+app.UseStaticFiles();
 
+// Mappa i controller (se ne hai)
+app.MapControllers();
+
+// Avvia l'host web in background
+Task webHostTask = app.RunAsync();
+
+// Esegui la logica CLI in un task separato
+Task cliTask = Task.Run(() =>
+{
+    // Logica CLI: per esempio, leggere comandi da console o eseguire operazioni CLI
+    Console.WriteLine("Applicazione CLI in esecuzione. Digita 'exit' per terminare.");
+    while (true)
+    {
+        string? input = Console.ReadLine();
+        if (input?.Trim().ToLower() == "exit")
+        {
+            Console.WriteLine("Terminazione CLI richiesta.");
+            break;
+        }
+        // Puoi gestire altri comandi qui...
+        Console.WriteLine($"Hai digitato: {input}");
+    }
+});
+
+// Attendi la terminazione di uno dei due (ad es. se l'utente esce dalla CLI)
+await Task.WhenAny(webHostTask, cliTask);
