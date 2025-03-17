@@ -12,25 +12,42 @@ const NetworkTest: React.FC = () => {
   const [isError, setIsError] = useState(false);
   //const [uploadFile, setUploadFile] = useState<File | null>(null);
 
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  /*const containerVariants = {
+    hidden: { opacity: 0, y: -50 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { duration: 0.5 }
+    }
+  };*/
+
   // Funzione per testare il download
   const testDownload = async () => {
     if (!token) {
         alert("Effettua prima il login.");
         return;
       }
+    setIsError(false);
     setIsDownloading(true);
-    const downloadUrl = "https://localhost:5071/api/NetworkTest/download"; // Aggiorna l'URL se necessario
+    setDownloadSpeed(null);
+    const downloadUrl = `${apiUrl}/NetworkTest/download`; // Aggiorna l'URL se necessario
     const startTime = performance.now();
     try {
       const response = await fetch(downloadUrl, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const blob = await response.blob();
-      const endTime = performance.now();
-      const duration = (endTime - startTime) / 1000; // in secondi
-      const fileSizeBits = blob.size * 8; // dimensione in bit
-      const speedMbps = fileSizeBits / duration / (1024 * 1024);
-      setDownloadSpeed(speedMbps);
+      if(response.ok){
+        const blob = await response.blob();
+        const endTime = performance.now();
+        const duration = (endTime - startTime) / 1000; // in secondi
+        const fileSizeBits = blob.size * 8; // dimensione in bit
+        const speedMbps = fileSizeBits / duration / (1024 * 1024);
+        setDownloadSpeed(speedMbps);
+      } else {
+        setIsError(true);
+      }
     } catch (error) {
       console.error("Download error:", error);
     }
@@ -58,7 +75,7 @@ const NetworkTest: React.FC = () => {
     }
     setIsError(false);
     setIsUploading(true);
-    const uploadUrl = "https://localhost:5071/api/NetworkTest/upload"; // Aggiorna l'URL se necessario
+    const uploadUrl = `${apiUrl}/NetworkTest/upload`; // Aggiorna l'URL se necessario
     const formData = new FormData();
     formData.append("file", uploadFile, uploadFile.name);
     const startTime = performance.now();
@@ -100,7 +117,8 @@ const NetworkTest: React.FC = () => {
     }
     setIsError(false);
     setIsUploading(true);
-    const uploadUrl = "https://localhost:5071/api/NetworkTest/upload";
+    setUploadSpeed(null);
+    const uploadUrl = `${apiUrl}/NetworkTest/upload`;
     
     // Dimensione dei dati random (ad esempio, 10 MB)
     const sizeInBytes = 10 * 1024 * 1024;
@@ -121,12 +139,17 @@ const NetworkTest: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-      const result = await response.json();
-      const endTime = performance.now();
-      const duration = (endTime - startTime) / 1000; // tempo in secondi
-      const fileSizeBits = sizeInBytes * 8; // conversione in bit
-      const speedMbps = fileSizeBits / duration / (1024 * 1024);
-      setUploadSpeed(speedMbps);
+      
+      if(response.ok){
+        //const result = await response.json();
+        const endTime = performance.now();
+        const duration = (endTime - startTime) / 1000; // tempo in secondi
+        const fileSizeBits = sizeInBytes * 8; // conversione in bit
+        const speedMbps = fileSizeBits / duration / (1024 * 1024);
+        setUploadSpeed(speedMbps);
+      } else {
+        setIsError(true);  
+      }
     } catch (error) {
       setIsError(true);
       console.error("Upload error:", error);

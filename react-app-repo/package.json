@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "dotenv -e .env.production next build && node postexport.js",
+    "build-intranet": "dotenv -e .env.intranet next build && node postexport.js",
     "start": "next start",
     "lint": "next lint"
   },
@@ -20,8 +21,11 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv-cli": "^8.0.0",
     "eslint": "^9",
     "eslint-config-next": "15.2.2",
+    "framer-motion": "^12.5.0",
+    "rimraf": "^6.0.1",
     "tailwindcss": "^4.0.14",
     "typescript": "^5"
   }

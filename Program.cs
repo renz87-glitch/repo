@@ -38,7 +38,10 @@ builder.Services.AddCors(options =>
         // default
         options.AddPolicy("Policy1", policy =>
         {
-            policy.WithOrigins("http://localhost:3000", "http://192.168.178.113:3000")
+            policy.WithOrigins("http://localhost:3000"
+                             , "http://192.168.178.113:5051"
+                             , "https://192.168.178.113:5071"
+                             , "http://192.168.178.113:3000")
                   .AllowAnyMethod()
                   .AllowAnyHeader();
         });
@@ -133,6 +136,7 @@ if (app.Environment.IsDevelopment())
 // Middleware per il fallback alle SPA (come nel tuo snippet)
 app.Use(async (context, next) =>
 {
+    Console.WriteLine($"request arrived: {context.Request.Path}");
     context.Request.EnableBuffering();
     await next();
 
