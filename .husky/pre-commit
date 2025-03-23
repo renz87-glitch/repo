@@ -1,0 +1,16 @@
+echo "🔍 Verifica se Husky è installato..."
+
+# Controlla se la cartella .husky esiste
+if [ ! -d ".husky" ]; then
+  echo "❌ Husky non è installato correttamente. Esegui: npm install && npx husky install"
+  exit 1
+fi
+
+# Controlla se Husky è dichiarato come dipendenza nel package.json
+if ! grep -q '"husky"' package.json; then
+  echo "❌ Husky non è dichiarato come dipendenza dev nel tuo package.json."
+  echo "Esegui: npm install husky --save-dev"
+  exit 1
+fi
+
+echo "✅ Husky installato correttamente."

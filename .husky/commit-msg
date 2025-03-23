@@ -1,0 +1,17 @@
+echo "🔍 Avvio controllo commit con PowerShell..."
+
+# Controlla se esiste l'argomento passato da Git
+if [ -z "$1" ]; then
+    echo "❌ Errore: Nessun file di commit specificato."
+    exit 1
+fi
+
+# Usa pwsh se disponibile, altrimenti usa powershell
+if command -v pwsh &> /dev/null; then
+    pwsh -ExecutionPolicy Bypass -File .husky/commit-msg.ps1 "$1"
+elif command -v powershell &> /dev/null; then
+    powershell -ExecutionPolicy Bypass -File .husky/commit-msg.ps1 "$1"
+else
+    echo "❌ PowerShell non è installato o non è nel PATH."
+    exit 1
+fi

@@ -1,0 +1,26 @@
+{
+  "name": "repo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky install",
+    "setup": "npm install && npx husky install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/renz87-glitch/repo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/renz87-glitch/repo/issues"
+  },
+  "homepage": "https://github.com/renz87-glitch/repo#readme",
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
+}
