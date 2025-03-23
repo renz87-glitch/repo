@@ -3,87 +3,93 @@ $ErrorActionPreference = "Stop"
 
 Write-Host "Controllo cherry-pick per messaggio di commit..."
 
-if (-not $args[0]) {
-    Write-Host "Errore: Nessun file di commit specificato."
-    exit 1
-}
-
-$CommitMsgFile = $args[0]
-
 try {
-    $commitMsg = Get-Content $CommitMsgFile -Raw
-} catch {
-    Write-Host "Errore nella lettura del file di commit: $_"
-    exit 1
-}
+    # Verifica se c'è un cherry-pick in corso
+    if (Test-Path .git/CHERRY_PICK_HEAD) {
+        $originalCommitSha = (Get-Content .git/CHERRY_PICK_HEAD).Trim()
+        Write-Host "SHA1 del commit originale da CHERRY_PICK_HEAD: $originalCommitSha"
 
-# Pattern per rilevare ticketid e cherry-pick
-$patternTicketId = "ticketid: \d+$"
-$patternCherryPick = "cherrypicked [a-f0-9]{40}"
+        # Variabili per verificare l'esistenza dei branch
+        $hasOriginMain = git branch -r | Select-String "origin/main"
+        $hasLocalMain = git branch | Select-String "main"
+        $hasOriginMaster = git branch -r | Select-String "origin/master"
+        $hasLocalMaster = git branch | Select-String "master"
 
-# Verifica se si è in stato di detached HEAD (probabile cherry-pick)
-$gitHeadOutput = git rev-parse --abbrev-ref HEAD 2>&1
+        # Verifica se il commit originale proviene da main o master (remoti e locali)
+        $isFromMain = $null
+        $isFromLocalMain = $null
+        $isFromMaster = $null
+        $isFromLocalMaster = $null
 
-if ($gitHeadOutput -eq "HEAD") {
-    try {
-        $cherryPickSha = git rev-parse HEAD 2>&1
-        $branchSource = git name-rev --name-only $cherryPickSha 2>&1
-
-        if ($branchSource -like "*master*" -or $branchSource -like "*main*") {
-			$logCherryPick = "Rilevato cherry-pick da $branchSource. SHA1: $cherryPickSha"
-            Write-Host $logCherryPick
-
-            if ($commitMsg -notmatch $patternCherryPick) {
-                $cherryPickInfo = "cherrypicked $cherryPickSha"
-
-                if ($commitMsg -match $patternTicketId) {
-                    $commitMsg = $commitMsg -replace "($patternTicketId)", "$cherryPickInfo`r`n$1"
-                } else {
-                    $commitMsg += "`r`n$cherryPickInfo`r`n" + "ticketid: 123"
-                }
-
-                # Aggiungi tipo Windows Forms
-                Add-Type -AssemblyName PresentationCore, PresentationFramework
-
-                # Crea la finestra di dialogo
-                $window = New-Object System.Windows.Window
-                $window.Title = "Modifica del Messaggio di Commit"
-                $window.Width = 600
-                $window.Height = 400
-                $window.ResizeMode = "CanResize"
-
-                # Crea un TextBox per l'input
-                $textBox = New-Object System.Windows.Controls.TextBox
-                $textBox.Text = $commitMsg
-                $textBox.AcceptsReturn = $true
-                $textBox.VerticalScrollBarVisibility = "Auto"
-                $textBox.HorizontalScrollBarVisibility = "Auto"
-                $window.Content = $textBox
-
-                # Mostra la finestra di dialogo e attende l'interazione dell'utente
-                $null = $window.ShowDialog()
-
-                # Ottieni il testo modificato dall'utente
-                $commitMsg = $textBox.Text
-
-                # Salva il messaggio modificato nel file
-                try {
-                    Set-Content -Path $CommitMsgFile -Value $commitMsg
-                    Write-Host "Messaggio di commit modificato e salvato correttamente."
-                } catch {
-                    Write-Host "Errore nella scrittura del file di commit: $_"
-                    exit 1
-                }
-            }
-        } else {
-            Write-Host "OK: Non è stato rilevato un cherry-pick da master."
+        if ($hasOriginMain) {
+            $isFromMain = git log origin/main --pretty=format:"%H" | Select-String -Pattern $originalCommitSha
         }
-    } catch {
-        Write-Host "Errore durante l'identificazione del cherry-pick: $_"
-        exit 1
+        if ($hasLocalMain) {
+            $isFromLocalMain = git log main --pretty=format:"%H" | Select-String -Pattern $originalCommitSha
+        }
+        if ($hasOriginMaster) {
+            $isFromMaster = git log origin/master --pretty=format:"%H" | Select-String -Pattern $originalCommitSha
+        }
+        if ($hasLocalMaster) {
+            $isFromLocalMaster = git log master --pretty=format:"%H" | Select-String -Pattern $originalCommitSha
+        }
+
+        if ($isFromMain -or $isFromLocalMain -or $isFromMaster -or $isFromLocalMaster) {
+            Write-Host "Rilevato cherry-pick da main o master. SHA1: $originalCommitSha"
+
+            # Recupera il messaggio di commit originale
+            $commitMsgFile = $args[0]
+            $originalCommitMsg = Get-Content $commitMsgFile -Raw
+
+            # Cerca la posizione del ticketid
+            $ticketPattern = "(?ms)^(.*?)(\bticketid: \d+)$"
+			#$firstPattern = "(?m)^(.*?)(ticketid: \d+)$"
+            $modifiedCommitMsg = $originalCommitMsg
+			
+		    #if($originalCommitMsg -match $firstPattern) {
+				#$if1Match0 = $Matches[0]
+				#$if1Match1 = $Matches[1]
+				#$if1Match2 = $Matches[2]
+				#Write-Host "if 1:"
+				#Write-Host "Matches[0] $if1Match0"
+				#Write-Host "Matches[1] $if1Match1"
+				#Write-Host "Matches[2] $if1Match2"
+			    #$ticketidLine = $Matches[2]
+		    #}
+
+            if ($originalCommitMsg -match $ticketPattern) {
+			#	$if2Match0 = $Matches[0]
+			#	$if2Match1 = $Matches[1]
+			#	$if2Match2 = $Matches[2]
+			#	Write-Host "if 2:"
+			#	Write-Host "Matches[0] $if2Match0"
+			#	Write-Host "Matches[1] $if2Match1"
+			#	Write-Host "Matches[2] $if2Match2"
+				$preTicketPart = $Matches[1]
+				$ticketidLine = $Matches[2]
+			}
+			
+			if(-not [string]::IsNullOrWhiteSpace($preTicketPart) -and -not [string]::IsNullOrWhiteSpace($ticketidLine)){
+			    # Ricostruisci il messaggio senza perdere il ticketid
+                $modifiedCommitMsg = $preTicketPart + "`r`ncherrypicked $originalCommitSha`r`n" + $ticketidLine
+				Write-Host "ticketid presente"
+			} else {
+                # Se non trova un ticketid, aggiunge il messaggio alla fine
+                $modifiedCommitMsg = $originalCommitMsg + "`r`ncherrypicked $originalCommitSha"
+            }
+
+            # Scrive il messaggio modificato nel file temporaneo
+            Set-Content -Path $commitMsgFile -Value $modifiedCommitMsg
+            Write-Host "Messaggio di commit modificato e salvato con successo."
+        } else {
+            Write-Host "Il commit non proviene da main o master. Nessuna modifica effettuata."
+        }
+    } else {
+        Write-Host "Nessuna operazione di cherry-pick rilevata."
     }
-} else {
-    Write-Host "OK: Commit normale, nessuna modifica necessaria."
+} catch {
+    Write-Host "Errore durante l'elaborazione del commit: $_"
+    exit 1
 }
 
 exit 0

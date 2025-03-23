@@ -1,0 +1,11 @@
+echo "Hook prepare-commit-msg attivato correttamente."
+
+# Usa pwsh se disponibile, altrimenti usa powershell
+if command -v pwsh &> /dev/null; then
+    pwsh -ExecutionPolicy Bypass -File .husky/commit-msg-cherrypick.ps1 "$1"
+elif command -v powershell &> /dev/null; then
+    powershell -ExecutionPolicy Bypass -File .husky/commit-msg-cherrypick.ps1 "$1"
+else
+    echo "PowerShell non è installato o non è nel PATH."
+    exit 1
+fi
