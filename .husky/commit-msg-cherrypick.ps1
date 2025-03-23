@@ -29,8 +29,9 @@ if ($gitHeadOutput -eq "HEAD") {
         $cherryPickSha = git rev-parse HEAD 2>&1
         $branchSource = git name-rev --name-only $cherryPickSha 2>&1
 
-        if ($branchSource -like "*master*") {
-            Write-Host "Rilevato cherry-pick da master. SHA1: $cherryPickSha"
+        if ($branchSource -like "*master*" -or $branchSource -like "*main*") {
+			$logCherryPick = "Rilevato cherry-pick da $branchSource. SHA1: $cherryPickSha"
+            Write-Host $logCherryPick
 
             if ($commitMsg -notmatch $patternCherryPick) {
                 $cherryPickInfo = "cherrypicked $cherryPickSha"
