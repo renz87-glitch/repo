@@ -8,3 +8,4 @@ obj/ApiRepo.csproj.nuget.g.props
 /node_modules
 /package-lock.json
 react-app-repo/package-lock.json
+/react-app-repo/package-lock.json

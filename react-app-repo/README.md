@@ -18,6 +18,26 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
+## Toolsets via Headbar Tabs
+
+- The headbar shows selectable tabs for available toolsets.
+- Current toolsets: `Login`, `Network Test`.
+- URL query `?tool=login` (or `?tool=network`) selects the active tab directly.
+- To add a new toolset, edit `react-app-repo/app/components/toolsets.tsx` and append `{ id, label, element }`.
+
+Auth context is provided globally from `app/layout.tsx` using `AuthProvider`.
+
+## Configurare il server di destinazione
+
+- Dalla UI: nella tab `Login`, compila il campo "Server API" (es. `https://mio-server.example.com`). Il valore viene salvato nel browser e usato sia per il login che per il Network Test.
+- Da variabile d'ambiente: imposta `NEXT_PUBLIC_API_URL` (es. in `react-app-repo/.env.local`) per definire il valore iniziale.
+
+Esempio `.env.local`:
+
+```
+NEXT_PUBLIC_API_URL=https://mio-server.example.com
+```
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More

@@ -4,41 +4,28 @@ import React, { useState } from "react";
 import { useAuth } from "./authcontext";
 
 const NetworkTest: React.FC = () => {
-  const { token } = useAuth();
+  const { token, apiBaseUrl } = useAuth();
   const [downloadSpeed, setDownloadSpeed] = useState<number | null>(null);
   const [uploadSpeed, setUploadSpeed] = useState<number | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isError, setIsError] = useState(false);
-  //const [uploadFile, setUploadFile] = useState<File | null>(null);
+  // const [uploadFile, setUploadFile] = useState<File | null>(null);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-
-  /*const containerVariants = {
-    hidden: { opacity: 0, y: -50 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: { duration: 0.5 }
-    }
-  };*/
 
   // Funzione per testare il download
   const testDownload = async () => {
-    if (!token) {
-        alert("Effettua prima il login.");
-        return;
-      }
+    if (!token) return;
     setIsError(false);
     setIsDownloading(true);
     setDownloadSpeed(null);
-    const downloadUrl = `${apiUrl}/NetworkTest/download`; // Aggiorna l'URL se necessario
+    const downloadUrl = `${apiBaseUrl}/NetworkTest/download`;
     const startTime = performance.now();
     try {
       const response = await fetch(downloadUrl, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if(response.ok){
+      if (response.ok) {
         const blob = await response.blob();
         const endTime = performance.now();
         const duration = (endTime - startTime) / 1000; // in secondi
@@ -50,60 +37,17 @@ const NetworkTest: React.FC = () => {
       }
     } catch (error) {
       console.error("Download error:", error);
+      setIsError(true);
     }
     setIsDownloading(false);
   };
 
-  // Gestione della selezione del file per l'upload
-  /*const handleFileSelect = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ): void => {
-    if (e.target.files && e.target.files.length > 0) {
-      setUploadFile(e.target.files[0]);
-    }
-  };
-
-  // Funzione per testare l'upload
-  const testUpload = async () => {
-    if (!token) {
-        alert("Effettua prima il login.");
-        return;
-      }
-    if (!uploadFile) {
-      alert("Seleziona un file prima di eseguire il test di upload.");
-      return;
-    }
-    setIsError(false);
-    setIsUploading(true);
-    const uploadUrl = `${apiUrl}/NetworkTest/upload`; // Aggiorna l'URL se necessario
-    const formData = new FormData();
-    formData.append("file", uploadFile, uploadFile.name);
-    const startTime = performance.now();
-    try {
-      const response = await fetch(uploadUrl, {
-        method: "POST",      
-        headers: { Authorization: `Bearer ${token}` },  
-        body: formData,
-      });
-      const result = await response.json();
-      const endTime = performance.now();
-      const duration = (endTime - startTime) / 1000; // in secondi
-      const fileSizeBits = uploadFile.size * 8;
-      const speedMbps = fileSizeBits / duration / (1024 * 1024);
-      setUploadSpeed(speedMbps);
-    } catch (error) {
-      setIsError(true);
-      console.error("Upload error:", error);
-    }
-    setIsUploading(false);
-  };*/
-
+  // Genera dati random per upload (senza selezione file)
   const generateRandomData = (totalSize: number): Uint8Array => {
     const maxChunkSize = 65536; // limite per getRandomValues
     const randomData = new Uint8Array(totalSize);
     for (let offset = 0; offset < totalSize; offset += maxChunkSize) {
       const chunkSize = Math.min(maxChunkSize, totalSize - offset);
-      // Ottieni una sottovista sull'array randomData e riempi con dati casuali
       const chunk = randomData.subarray(offset, offset + chunkSize);
       crypto.getRandomValues(chunk);
     }
@@ -111,27 +55,19 @@ const NetworkTest: React.FC = () => {
   };
 
   const testUploadRandom = async () => {
-    if (!token) {
-      alert("Effettua prima il login.");
-      return;
-    }
+    if (!token) return;
     setIsError(false);
     setIsUploading(true);
     setUploadSpeed(null);
-    const uploadUrl = `${apiUrl}/NetworkTest/upload`;
-    
-    // Dimensione dei dati random (ad esempio, 10 MB)
+    const uploadUrl = `${apiBaseUrl}/NetworkTest/upload`;
+
+    // 10 MB di dati random
     const sizeInBytes = 10 * 1024 * 1024;
     const randomData = generateRandomData(sizeInBytes);
-    
-    // Crea un Blob dai dati casuali
     const blob = new Blob([randomData], { type: "application/octet-stream" });
-    
-    // Prepara il FormData
     const formData = new FormData();
-    // Usa un nome fittizio per il file, ad esempio "random.dat"
     formData.append("file", blob, "random.dat");
-    
+
     const startTime = performance.now();
     try {
       const response = await fetch(uploadUrl, {
@@ -139,16 +75,15 @@ const NetworkTest: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-      
-      if(response.ok){
-        //const result = await response.json();
+
+      if (response.ok) {
         const endTime = performance.now();
-        const duration = (endTime - startTime) / 1000; // tempo in secondi
-        const fileSizeBits = sizeInBytes * 8; // conversione in bit
+        const duration = (endTime - startTime) / 1000; // s
+        const fileSizeBits = sizeInBytes * 8; // bit
         const speedMbps = fileSizeBits / duration / (1024 * 1024);
         setUploadSpeed(speedMbps);
       } else {
-        setIsError(true);  
+        setIsError(true);
       }
     } catch (error) {
       setIsError(true);
@@ -158,79 +93,56 @@ const NetworkTest: React.FC = () => {
   };
 
   return (
-    <div className="p-6 bg-white rounded shadow-lg text-gray-800">
-      <h2 className="text-2xl font-bold mb-4">Test di Velocità di Rete</h2>
+    <div className="w-full rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-neutral-900 shadow-lg p-6">
+      <div className="mb-6 text-center">
+        <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center">
+          {/* icona tachimetro */}
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-foreground/80">
+            <path d="M20.39 18.39A10 10 0 1 0 5.61 3.61 10 10 0 0 0 20.39 18.39z"/>
+            <path d="M12 12l4-4"/>
+          </svg>
+        </div>
+        <h2 className="text-2xl font-semibold tracking-tight">Test di Velocità di Rete</h2>
+        {!token && (
+          <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">Accedi per eseguire i test</p>
+        )}
+      </div>
 
-      {/* Sezione Download */}
-      <div className="mb-6">
+      <div className="flex flex-wrap gap-3 mb-4">
         <button
           onClick={testDownload}
-          className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
+          disabled={!token || isDownloading || isUploading}
+          className={`rounded-lg h-10 px-4 flex items-center justify-center bg-foreground text-background transition-colors font-medium ${(!token || isDownloading || isUploading) ? 'opacity-60 cursor-not-allowed' : 'hover:bg-[#383838] dark:hover:bg-[#ccc]'}`}
         >
-          Avvia Test Download
+          {isDownloading ? 'Download in corso…' : 'Avvia Test Download'}
         </button>
-        {isDownloading && (
-          <p className="mt-2 text-blue-500 animate-pulse">
-            Download in corso...
-          </p>
-        )}
-        {downloadSpeed !== null && !isDownloading && (
-          <p className="mt-2">
-            Velocità di download: {downloadSpeed.toFixed(2)} Mbps
-          </p>
-        )}
-      </div>
-
-      {/* Sezione Upload file */}
-      {/*<div>
-        <input type="file" onChange={handleFileSelect} className="mb-4" />
-        <button
-          onClick={testUpload}
-          className="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded"
-        >
-          Avvia Test Upload
-        </button>        
-        {isError && (
-          <p className="mt-2 text-red-500 animate-pulse">
-            Errore!
-          </p>
-        )}
-        {isUploading && (
-          <p className="mt-2 text-green-500 animate-pulse">
-            Upload in corso...
-          </p>
-        )}
-        {uploadSpeed !== null && !isUploading && (
-          <p className="mt-2">
-            Velocità di upload: {uploadSpeed.toFixed(2)} Mbps
-          </p>
-        )}
-      </div> */}
-
-      {/* Sezione Upload Random data */}
-      <div>
         <button
           onClick={testUploadRandom}
-          className="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded"
+          disabled={!token || isDownloading || isUploading}
+          className={`rounded-lg h-10 px-4 flex items-center justify-center bg-foreground text-background transition-colors font-medium ${(!token || isDownloading || isUploading) ? 'opacity-60 cursor-not-allowed' : 'hover:bg-[#383838] dark:hover:bg-[#ccc]'}`}
         >
-          Avvia Test Upload
+          {isUploading ? 'Upload in corso…' : 'Avvia Test Upload'}
         </button>
-        {isUploading && (
-          <p className="mt-2 text-green-500 animate-pulse">
-            Upload in corso...
-          </p>
-        )}
-        {isError && (
-          <p className="mt-2 text-red-500 animate-pulse">
-            Errore!
-          </p>
-        )}
-        {uploadSpeed !== null && !isUploading && (
-          <p className="mt-2">
-            Velocità di upload: {uploadSpeed.toFixed(2)} Mbps
-          </p>
-        )}
       </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-3">
+          <div className="text-sm text-neutral-600 dark:text-neutral-400">Velocità di download</div>
+          <div className="mt-1 text-xl font-semibold">
+            {downloadSpeed !== null ? `${downloadSpeed.toFixed(2)} Mbps` : '—'}
+          </div>
+        </div>
+        <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-3">
+          <div className="text-sm text-neutral-600 dark:text-neutral-400">Velocità di upload</div>
+          <div className="mt-1 text-xl font-semibold">
+            {uploadSpeed !== null ? `${uploadSpeed.toFixed(2)} Mbps` : '—'}
+          </div>
+        </div>
+      </div>
+
+      {isError && (
+        <p className="mt-4 text-sm text-red-600 dark:text-red-400">Si è verificato un errore durante il test.</p>
+      )}
     </div>
   );
 };

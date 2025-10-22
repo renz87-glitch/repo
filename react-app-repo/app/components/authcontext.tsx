@@ -1,12 +1,14 @@
 "use client";
 
-import React, { createContext, useState, useContext, ReactNode } from "react";
+import React, { createContext, useState, useContext, ReactNode, useEffect } from "react";
 
 interface AuthContextProps {
   token: string | null;
   login: (username: string, password: string) => Promise<void>;
   disconnect: () => Promise<void>;
   user: string | null;
+  apiBaseUrl: string;
+  setApiBaseUrl: (url: string) => void;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -14,37 +16,51 @@ const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<string | null>(null);
+  const [apiBaseUrl, setApiBaseUrlState] = useState<string>(process.env.NEXT_PUBLIC_API_URL || "");
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  // Carica base URL da localStorage al mount (client only)
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("apiBaseUrl");
+      if (saved) setApiBaseUrlState(saved);
+    } catch {}
+  }, []);
+
+  const setApiBaseUrl = (url: string) => {
+    setApiBaseUrlState(url);
+    try {
+      window.localStorage.setItem("apiBaseUrl", url);
+    } catch {}
+  };
 
   const login = async (username: string, password: string) => {
     try {
-      const response = await fetch(`${apiUrl}/auth/login`, {
+      const response = await fetch(`${apiBaseUrl}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || "Login failed");
+        let message = "Login failed";
+        try {
+          const data = await response.json();
+          message = data?.message || message;
+        } catch {}
+        throw new Error(message);
       }
       const data = await response.json();
       setToken(data.token);
       setUser(username);
     } catch (error: unknown) {
-      if (error instanceof Error) {
-        alert("Errore di login: " + error.message);
-      } else {
-        alert("Errore di login: " + String(error));
-      }
+      throw error instanceof Error ? error : new Error(String(error));
     }
   };
 
   const disconnect = async () => {
     try {
-        if(!token){
-            throw new Error("Già disconnesso!");
-        }
+      if (!token) {
+        throw new Error("Già disconnesso!");
+      }
       setToken(null);
       setUser(null);
     } catch (error: unknown) {
@@ -57,7 +73,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ token, login, disconnect, user }}>
+    <AuthContext.Provider value={{ token, login, disconnect, user, apiBaseUrl, setApiBaseUrl }}>
       {children}
     </AuthContext.Provider>
   );
@@ -70,3 +86,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
