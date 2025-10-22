@@ -53,6 +53,26 @@ NEXT_PUBLIC_API_URL=https://mio-server.example.com
   - Esegui `scripts/open-firewall-dev.ps1` per aprire le porte 3000/5051/5071 sul profilo `Private`.
   - Personalizza con `-Ports` e `-Profile` se necessario.
 
+## Build e Publish per IIS
+
+- Batch di build: `scripts\build_and_publish.bat`
+  - Uso: `scripts\build_and_publish.bat [frontend_env] [publish_dir]`
+    - `frontend_env`: `production` (default) oppure `intranet` (usa `npm run build-intranet`).
+    - `publish_dir`: cartella di output, default `./artifacts/publish`.
+  - Cosa fa:
+    - Installa dipendenze e builda il frontend Next.js (con postexport negli asset statici in `wwwroot`).
+    - Esegue `dotnet publish -c Release -o [publish_dir]` e, se manca, genera un `web.config` minimale per IIS.
+  - Requisiti macchina di build: `dotnet`, `node`, `npm` disponibili nel PATH.
+  - Nota env: gli script npm usano dotenv. Sono inclusi file di esempio:
+    - `react-app-repo/.env.production`
+    - `react-app-repo/.env.intranet`
+    Modifica `NEXT_PUBLIC_API_URL` secondo il tuo ambiente oppure imposta l’host via UI (campo Server API) a runtime.
+
+- Deploy IIS:
+  - Installa l'"ASP.NET Core Hosting Bundle" sulla macchina IIS.
+  - Crea un sito/app che punti alla cartella `publish_dir` prodotta dallo script.
+  - Verifica che l'App Pool abbia diritti di lettura sulla cartella.
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More

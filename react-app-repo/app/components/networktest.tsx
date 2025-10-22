@@ -120,8 +120,6 @@ const NetworkTest: React.FC = () => {
         };
         xhr.onreadystatechange = () => {
           if (xhr.readyState === 4) {
-            const end = performance.now();
-            const dt = Math.max(0.001, (end - start) / 1000);
             totalSent += sizeInBytes;
             try {
               const json = JSON.parse(xhr.responseText);
