@@ -38,6 +38,21 @@ Esempio `.env.local`:
 NEXT_PUBLIC_API_URL=https://mio-server.example.com
 ```
 
+## Dev su rete locale (frontend + backend)
+
+- Backend .NET (appsettings.json):
+  - `Cors.Mode`: metti `Static` per consentire un front-end su un altro host della LAN.
+  - `CorsPolicies.DevFront.AllowedOrigins`: aggiungi l'IP della macchina front-end, es. `http://192.168.1.50:3000`.
+  - In alternativa lascia `Dynamic` se front-end gira sulla stessa macchina del backend.
+
+- Frontend Next.js:
+  - Avvio in LAN: `npm run dev -- -H 0.0.0.0 -p 3000`
+  - Imposta "Server API" in login all'URL del backend, es. `http://192.168.1.10:5051`.
+
+- Firewall Windows (facoltativo):
+  - Esegui `scripts/open-firewall-dev.ps1` per aprire le porte 3000/5051/5071 sul profilo `Private`.
+  - Personalizza con `-Ports` e `-Profile` se necessario.
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More

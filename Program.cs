@@ -8,45 +8,97 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Security.Cryptography;
+using System.Net;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
+using System.Linq;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Leggi la sezione "CorsPolicies" da appsettings.json e mappala in un dizionario
-var corsPolicies = builder.Configuration
-    .GetSection("CorsPolicies")
-    .Get<Dictionary<string, CorsPolicySettings>>();
+// Ottimizza limiti Kestrel per test di rete (disabilita data rate minimi e aumenta dimensione body)
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MinRequestBodyDataRate = null;   // evita abort su upload lenti
+    options.Limits.MinResponseDataRate = null;      // evita abort su stream download lenti
+    options.Limits.MaxRequestBodySize = 1_073_741_824; // 1 GB
+});
 
+// Rimosso: lettura CorsPolicies da appsettings
+// Modalità CORS: "Dynamic" | "Static" | (fallback automatico)
+var corsMode = builder.Configuration["Cors:Mode"];
+var staticPolicyName = builder.Configuration["Cors:StaticPolicyName"] ?? "StaticCustom";
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+var allowedMethods = builder.Configuration.GetSection("Cors:AllowedMethods").Get<string[]>() ?? new[] { "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS" };
+var allowedHeaders = builder.Configuration.GetSection("Cors:AllowedHeaders").Get<string[]>() ?? new[] { "Content-Type", "Authorization", "Accept", "X-Requested-With" };
+
+// Costruisci l'elenco degli host locali (IP/hostname) consentiti per CORS dinamico
+HashSet<string> BuildLocalHosts()
+{
+    var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "localhost",
+        "127.0.0.1",
+        "::1"
+    };
+    try
+    {
+        foreach (var ni in NetworkInterface.GetAllNetworkInterfaces()
+                     .Where(n => n.OperationalStatus == OperationalStatus.Up))
+        {
+            foreach (var ua in ni.GetIPProperties().UnicastAddresses)
+            {
+                var addr = ua.Address;
+                if (addr.AddressFamily == AddressFamily.InterNetwork || addr.AddressFamily == AddressFamily.InterNetworkV6)
+                {
+                    set.Add(addr.ToString());
+                }
+            }
+        }
+        var hostName = Dns.GetHostName();
+        set.Add(hostName);
+        foreach (var addr in Dns.GetHostAddresses(hostName))
+        {
+            set.Add(addr.ToString());
+        }
+    }
+    catch { }
+    return set;
+}
+var localHosts = BuildLocalHosts();
 
 // Configura CORS: qui viene creato un policy che consente tutte le origini, metodi e header
 builder.Services.AddCors(options =>
 {
-    if(corsPolicies?.Count > 0) 
+    // Policy statica personalizzabile via appsettings (Cors:Allowed*)
+    options.AddPolicy("StaticCustom", policy =>
     {
-        foreach (var policyConfig in corsPolicies)
-        {
-            options.AddPolicy(policyConfig.Key, policy =>
+        var origins = (allowedOrigins.Length > 0) ? allowedOrigins : new[] { "http://localhost:3000" };
+        policy.WithOrigins(origins)
+              .WithMethods(allowedMethods)
+              .WithHeaders(allowedHeaders);
+    });
+
+    // Policy dinamica basata sugli IP/host locali del server
+    options.AddPolicy("DynamicIp", policy =>
+    {
+        policy
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .SetIsOriginAllowed(origin =>
             {
-                //"http://localhost:3000"
-                policy.WithOrigins(policyConfig.Value.AllowedOrigins)
-                      .WithMethods(policyConfig.Value.AllowedMethods)
-                      .WithHeaders(policyConfig.Value.AllowedHeaders);
+                if (string.IsNullOrEmpty(origin)) return false;
+                if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri)) return false;
+                var host = uri.Host;
+                return localHosts.Contains(host);
             });
-        }
-    } 
-    else
-    {
-        // default
-        options.AddPolicy("Policy1", policy =>
-        {
-            policy.WithOrigins("http://localhost:3000"
-                             , "http://192.168.178.113:5051"
-                             , "https://192.168.178.113:5071"
-                             , "http://192.168.178.113:3000")
-                  .AllowAnyMethod()
-                  .AllowAnyHeader();
-        });
-    }
+        // .AllowCredentials(); // abilita solo se usi cookie/credenziali cross-origin
+    });
 });
+
+// Selezione policy da usare a runtime
+string selectedCorsPolicyName = string.Equals(corsMode, "dynamic", StringComparison.OrdinalIgnoreCase)
+    ? "DynamicIp"
+    : (staticPolicyName ?? "StaticCustom");
 
 // Leggi le impostazioni JWT dal file di configurazione
 var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -156,17 +208,11 @@ app.Use(async (context, next) =>
 // Abilita i file statici (assicurati di aver configurato wwwroot e index.html)
 app.UseStaticFiles();
 
+// Abilita CORS prima degli endpoint
+app.UseCors(selectedCorsPolicyName);
+
 // Mappa i controller (se ne hai)
 app.MapControllers();
-
-if (corsPolicies?.Count > 0)
-{
-    app.UseCors(corsPolicies.First().Key);
-}
-else
-{
-    app.UseCors("Policy1");
-}
 
 // Avvia l'host web in background
 Task webHostTask = app.RunAsync();
@@ -193,9 +239,4 @@ Task cliTask = Task.Run(() =>
 await Task.WhenAny(webHostTask, cliTask);
 
 
-public class CorsPolicySettings
-{
-    public string[] AllowedOrigins { get; set; }
-    public string[] AllowedMethods { get; set; }
-    public string[] AllowedHeaders { get; set; }
-}
+// Rimosso: modello CorsPolicySettings (non più usato)

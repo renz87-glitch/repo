@@ -7,8 +7,9 @@ interface AuthContextProps {
   login: (username: string, password: string) => Promise<void>;
   disconnect: () => Promise<void>;
   user: string | null;
-  apiBaseUrl: string;
-  setApiBaseUrl: (url: string) => void;
+  apiBaseUrl: string; // sempre hostRoot + '/api'
+  apiHostRoot: string; // es. http://server[:port]
+  setApiHostRoot: (url: string) => void;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -16,22 +17,31 @@ const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<string | null>(null);
-  const [apiBaseUrl, setApiBaseUrlState] = useState<string>(process.env.NEXT_PUBLIC_API_URL || "");
+  const [apiHostRoot, setApiHostRootState] = useState<string>("");
 
   // Carica base URL da localStorage al mount (client only)
   useEffect(() => {
     try {
-      const saved = window.localStorage.getItem("apiBaseUrl");
-      if (saved) setApiBaseUrlState(saved);
+      const savedRoot = window.localStorage.getItem("apiHostRoot");
+      if (savedRoot) {
+        setApiHostRootState(savedRoot);
+        return;
+      }
+      const env = process.env.NEXT_PUBLIC_API_URL || "";
+      if (env) {
+        // se termina con /api, rimuovilo per ottenere l'host root
+        const root = env.replace(/\/?api\/?$/, "");
+        setApiHostRootState(root);
+      }
     } catch {}
   }, []);
 
-  const setApiBaseUrl = (url: string) => {
-    setApiBaseUrlState(url);
-    try {
-      window.localStorage.setItem("apiBaseUrl", url);
-    } catch {}
+  const setApiHostRoot = (url: string) => {
+    setApiHostRootState(url);
+    try { window.localStorage.setItem("apiHostRoot", url); } catch {}
   };
+
+  const apiBaseUrl = apiHostRoot ? `${apiHostRoot.replace(/\/$/, "")}/api` : "";
 
   const login = async (username: string, password: string) => {
     try {
@@ -73,7 +83,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ token, login, disconnect, user, apiBaseUrl, setApiBaseUrl }}>
+    <AuthContext.Provider value={{ token, login, disconnect, user, apiBaseUrl, apiHostRoot, setApiHostRoot }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,17 +1,20 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "./authcontext";
 
 const Login: React.FC = () => {
-  const { token, login, disconnect, user, apiBaseUrl, setApiBaseUrl } = useAuth();
+  const { token, login, disconnect, user, apiBaseUrl, apiHostRoot, setApiHostRoot } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const [clientIp, setClientIp] = useState<string | null>(null);
+  const [clientXff, setClientXff] = useState<string | null>(null);
 
   const handleLogin = async () => {
     setSubmitError(null);
@@ -51,6 +54,21 @@ const Login: React.FC = () => {
     },
   } as const;
 
+  useEffect(() => {
+    if (!apiBaseUrl) return;
+    const ctrl = new AbortController();
+    fetch(`${apiBaseUrl}/NetworkTest/client`, { signal: ctrl.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data) {
+          setClientIp(data.ip ?? null);
+          setClientXff(data.xForwardedFor ?? null);
+        }
+      })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, [apiBaseUrl]);
+
   return (
     <div className="w-full flex items-center justify-center">
       <motion.div
@@ -82,15 +100,18 @@ const Login: React.FC = () => {
                 >
                   Server API
                 </label>
-                <input
-                  id="apiBaseUrl"
-                  type="url"
-                  placeholder="https://server.example.com"
-                  className={`mt-1 block w-full rounded-lg border bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20 border-neutral-200 dark:border-neutral-700`}
-                  value={apiBaseUrl}
-                  onChange={(e) => setApiBaseUrl(e.target.value)}
-                />
-                <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">Usato per login e test rete. Salvato nel browser.</p>
+                <div className="relative">
+                  <input
+                    id="apiBaseUrl"
+                    type="url"
+                    placeholder="http://server[:port]"
+                    className={`mt-1 block w-full rounded-lg border bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 px-3 py-2 pr-16 focus:outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20 border-neutral-200 dark:border-neutral-700`}
+                    value={apiHostRoot}
+                    onChange={(e) => setApiHostRoot(e.target.value)}
+                  />
+                  <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-500 dark:text-neutral-400 select-none">/api</span>
+                </div>
+                <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">URL effettivo: {apiBaseUrl || '(imposta host)'} — salvato nel browser.</p>
               </div>
               <div>
                 <label
@@ -167,6 +188,11 @@ const Login: React.FC = () => {
               {submitError && (
                 <p className="text-sm text-red-600 dark:text-red-400 text-center">{submitError}</p>
               )}
+
+              <div className="mt-2 rounded-lg border border-neutral-200 dark:border-neutral-800 p-3 text-sm text-neutral-700 dark:text-neutral-300">
+                <div>IP client: {clientIp ?? '—'}</div>
+                {clientXff && <div>X-Forwarded-For: {clientXff}</div>}
+              </div>
             </div>
           </>
         ) : (
