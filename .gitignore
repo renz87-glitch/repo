@@ -9,3 +9,4 @@ obj/ApiRepo.csproj.nuget.g.props
 /package-lock.json
 react-app-repo/package-lock.json
 /react-app-repo/package-lock.json
+/artifacts/publish
